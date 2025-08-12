@@ -86,73 +86,20 @@ for file in os.listdir(repo_root):
     if re.match(r'^\d{2}-\d+-.*\.(rb|js)$', file):
         problem_files.append(file)
 
-print(f"Found {len(problem_files)} problem files in root: {problem_files}")
+# Iterate through the lessons directory to find problems that need conversion
+for lesson_folder in os.listdir(lessons_dir):
+    lesson_path = os.path.join(lessons_dir, lesson_folder)
+    if os.path.isdir(lesson_path):
+        for problem_folder in os.listdir(lesson_path):
+            problem_path = os.path.join(lesson_path, problem_folder)
+            if os.path.isdir(problem_path):
+                # Check for existing Ruby or JavaScript solution and absence of TypeScript solution
+                rb_solution = os.path.join(problem_path, "solution.rb")
+                js_solution = os.path.join(problem_path, "solution.js")
+                ts_solution = os.path.join(problem_path, "solution.ts")
 
-for file_name in problem_files:
-    match = re.match(r'^(?P<lesson_num>\d{2})-(?P<problem_num>\d+)-(?P<problem_slug>.*)\.(rb|js)$', file_name)
-    if not match:
-        print(f"Skipping {file_name}: does not match expected pattern.")
-        continue
-
-    lesson_num = match.group('lesson_num')
-    problem_slug = match.group('problem_slug').replace('_', '-') # Replace underscores with hyphens for consistency
-
-    lesson_folder_name = lesson_mapping.get(lesson_num)
-    if not lesson_folder_name:
-        print(f"Skipping {file_name}: No lesson mapping for {lesson_num}.")
-        continue
-
-    # Use the problem_name_mapping for the specific problem folder name
-    problem_folder_name = problem_name_mapping.get(problem_slug.replace('-', '_')) # Convert back to underscore for map lookup
-    if not problem_folder_name:
-        print(f"Skipping {file_name}: No problem mapping for {problem_slug}.")
-        continue
-
-    # Construct new paths
-    new_lesson_path = os.path.join(lessons_dir, lesson_folder_name)
-    new_problem_path = os.path.join(new_lesson_path, problem_folder_name)
-    new_solution_path = os.path.join(new_problem_path, f"solution.{match.group(4)}")
-    problem_md_path = os.path.join(new_problem_path, "problem.md")
-
-    # Create directories if they don't exist
-    os.makedirs(new_problem_path, exist_ok=True)
-
-    # Move the solution file
-    original_solution_path = os.path.join(repo_root, file_name)
-    if os.path.exists(original_solution_path):
-        shutil.move(original_solution_path, new_solution_path)
-        print(f"Moved {file_name} to {new_solution_path}")
-    else:
-        print(f"Original solution file not found: {original_solution_path}")
-
-    # Extract problem description from PDF and save as markdown
-    pdf_file_name = f"{lesson_num}-{lesson_folder_name.split('-')[1]}.pdf"
-    if lesson_folder_name == "07-StacksAndQueues": # Handle special filename
-        pdf_file_name = "07-Stacks and Queues.pdf"
-    pdf_path = os.path.join(lessons_dir, pdf_file_name)
-
-    if os.path.exists(pdf_path) and not os.path.exists(problem_md_path):
-        try:
-            reader = PdfReader(pdf_path)
-            text = ""
-            # This is a placeholder. A more sophisticated approach would be needed
-            # to extract only the relevant problem text from the PDF.
-            # For now, we'll just extract text from the first few pages.
-            for page_num in range(min(len(reader.pages), 3)): # Read first 3 pages as a heuristic
-                text += reader.pages[page_num].extract_text() or ""
-            
-            # Simple heuristic to find problem text based on common patterns
-            # This will need to be refined for each problem if it doesn't work well
-            # For now, we'll just save the extracted text.
-            with open(problem_md_path, "w", encoding="utf-8") as f:
-                f.write(f"# Problem: {problem_slug.replace('-', ' ').title()}\n\n")
-                f.write(text)
-            print(f"Extracted text from {pdf_file_name} to {problem_md_path}")
-        except Exception as e:
-            print(f"Error processing PDF {pdf_file_name}: {e}")
-    elif os.path.exists(problem_md_path):
-        print(f"Problem description already exists for {problem_slug}")
-    else:
-        print(f"PDF file not found: {pdf_path}")
+                if (os.path.exists(rb_solution) or os.path.exists(js_solution)) and not os.path.exists(ts_solution):
+                    print(f"Found unconverted problem: {lesson_folder}/{problem_folder}")
+                    # For now, just print. Later, we'll add logic to read and convert.
 
 print("Processing complete.")
